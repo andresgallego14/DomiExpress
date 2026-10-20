@@ -5,6 +5,8 @@ import org.domiexpress.pago.*;
 import org.domiexpress.pedido.Pedido;
 import org.domiexpress.productos.*;
 import org.domiexpress.promociones.*;
+import org.domiexpress.notificaciones.*;
+import org.domiexpress.persistencia.*;
 import java.util.List;
 
 public class Main {
@@ -31,6 +33,8 @@ public class Main {
         TipoEntrega entrega = new Domicilio("Calle 10 # 20-30");
         double costoEnvio = entrega.calcularCostoEnvio();
 
+
+
         List<Promocion> promociones = List.of(
                 new PromoDosPorUno(),
                 new PromoPorcentaje(0.10),
@@ -41,6 +45,17 @@ public class Main {
             System.out.println(promo.describir() + " -> descuento: "
                     + promo.calcularDescuento(pedido, costoEnvio));
         }
+        // Persistencia: el Main solo conoce la interfaz
+        RepositorioPedidos repositorio = new RepositorioEnMemoria();
+        repositorio.guardar(pedido);
+        System.out.println("Pedidos guardados: " + repositorio.listarTodos().size());
+
+        // Notificación: cambiar de canal es cambiar una línea
+        Notificador notificador = new NotificadorEmail();
+        notificador.notificar("cliente@correo.com", "Tu pedido " + pedido.getId() + " fue creado");
+
+        notificador = new NotificadorSMS();
+        notificador.notificar("3001234567", "Tu pedido " + pedido.getId() + " va en camino");
     }
 
     private static void procesarPago(MetodoPago metodo, double monto) {
@@ -52,4 +67,5 @@ public class Main {
                 + " | Envío: " + entrega.calcularCostoEnvio()
                 + " | Total: " + (subtotal + entrega.calcularCostoEnvio()));
     }
+
 }
