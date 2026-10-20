@@ -1,12 +1,14 @@
 package org.domiexpress;
 
 import org.domiexpress.entrega.*;
+import org.domiexpress.facturacion.GeneradorFactura;
 import org.domiexpress.pago.*;
 import org.domiexpress.pedido.Pedido;
 import org.domiexpress.productos.*;
 import org.domiexpress.promociones.*;
 import org.domiexpress.notificaciones.*;
 import org.domiexpress.persistencia.*;
+import org.domiexpress.servicio.ServicioPedidos;
 import org.domiexpress.usuarios.*;
 
 import java.util.List;
@@ -71,6 +73,17 @@ public class Main {
         repartidor.entregar(pedidoRol);
 
         System.out.println("Estado final: " + pedidoRol.getEstado());
+        // Servicio: todo conectado por interfaces
+        ServicioPedidos servicio = new ServicioPedidos(
+                new RepositorioEnMemoria(),
+                new NotificadorEmail(),
+                new GeneradorFactura());
+
+        servicio.procesar(pedido,
+                new Domicilio("Calle 10 # 20-30"),
+                new PagoNequi("3001234567"),
+                List.of(new PromoPorcentaje(0.10)),
+                "cliente@correo.com");
     }
 
     private static void procesarPago(MetodoPago metodo, double monto) {
