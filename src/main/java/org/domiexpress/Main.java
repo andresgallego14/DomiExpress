@@ -1,8 +1,10 @@
 package org.domiexpress;
 
+import org.domiexpress.entrega.*;
 import org.domiexpress.pago.*;
 import org.domiexpress.pedido.Pedido;
 import org.domiexpress.productos.*;
+import org.domiexpress.promociones.*;
 import java.util.List;
 
 public class Main {
@@ -17,15 +19,37 @@ public class Main {
 
         double total = pedido.calcularTotal();
 
-        // Primer intento: pago con tarjeta
+        // Pagos
         procesarPago(new PagoTarjeta("4321"), total);
-
-        // Cambiamos de medio de pago sin tocar Pedido ni procesarPago
         procesarPago(new PagoNequi("3001234567"), total);
+
+        // Entregas
+        mostrarEntrega(new Domicilio("Calle 10 # 20-30"), total);
+        mostrarEntrega(new RecogerEnTienda("Sede Centro"), total);
+
+        // Promociones: todas se usan igual, a través de la interfaz
+        TipoEntrega entrega = new Domicilio("Calle 10 # 20-30");
+        double costoEnvio = entrega.calcularCostoEnvio();
+
+        List<Promocion> promociones = List.of(
+                new PromoDosPorUno(),
+                new PromoPorcentaje(0.10),
+                new PromoEnvioGratis()
+        );
+
+        for (Promocion promo : promociones) {
+            System.out.println(promo.describir() + " -> descuento: "
+                    + promo.calcularDescuento(pedido, costoEnvio));
+        }
     }
 
-    // Recibe la INTERFAZ, no una clase concreta (polimorfismo + OCP).
     private static void procesarPago(MetodoPago metodo, double monto) {
         metodo.pagar(monto);
+    }
+
+    private static void mostrarEntrega(TipoEntrega entrega, double subtotal) {
+        System.out.println(entrega.describir()
+                + " | Envío: " + entrega.calcularCostoEnvio()
+                + " | Total: " + (subtotal + entrega.calcularCostoEnvio()));
     }
 }
