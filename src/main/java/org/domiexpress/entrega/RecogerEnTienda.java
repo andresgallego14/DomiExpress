@@ -14,6 +14,6 @@ public class RecogerEnTienda implements TipoEntrega{
 
     @Override
     public String describir() {
-        return "";
+        return "Recoger en tienda " + nombreTienda;
     }
 }

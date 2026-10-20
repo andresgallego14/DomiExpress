@@ -7,6 +7,8 @@ import org.domiexpress.productos.*;
 import org.domiexpress.promociones.*;
 import org.domiexpress.notificaciones.*;
 import org.domiexpress.persistencia.*;
+import org.domiexpress.usuarios.*;
+
 import java.util.List;
 
 public class Main {
@@ -56,6 +58,19 @@ public class Main {
 
         notificador = new NotificadorSMS();
         notificador.notificar("3001234567", "Tu pedido " + pedido.getId() + " va en camino");
+
+        // Roles: cada uno se usa por su capacidad, no por su clase
+        Pedido pedidoRol = new Pedido("P-002");
+        PuedeOrdenar cliente = new Cliente("Ana", pedidoRol);
+        cliente.agregarAlPedido(hamburguesa);
+
+        PuedePrepararPedidos restaurante = new Restaurante("La Parrilla");
+        restaurante.preparar(pedidoRol);
+
+        PuedeEntregar repartidor = new Repartidor("Carlos");
+        repartidor.entregar(pedidoRol);
+
+        System.out.println("Estado final: " + pedidoRol.getEstado());
     }
 
     private static void procesarPago(MetodoPago metodo, double monto) {

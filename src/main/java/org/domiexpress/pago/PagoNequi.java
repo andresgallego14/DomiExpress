@@ -8,6 +8,6 @@ public class PagoNequi implements MetodoPago {
     }
     @Override
     public void pagar(double monto){
-        System.out.println("Pagando $" + monto + " De nequi del celular "  + celular);
+        System.out.println("Pagando $" + monto + " con Nequi del celular "  + celular);
     }
 }
