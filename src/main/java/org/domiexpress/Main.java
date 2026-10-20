@@ -2,98 +2,57 @@ package org.domiexpress;
 
 import org.domiexpress.entrega.*;
 import org.domiexpress.facturacion.GeneradorFactura;
+import org.domiexpress.notificaciones.*;
 import org.domiexpress.pago.*;
 import org.domiexpress.pedido.Pedido;
+import org.domiexpress.persistencia.*;
 import org.domiexpress.productos.*;
 import org.domiexpress.promociones.*;
-import org.domiexpress.notificaciones.*;
-import org.domiexpress.persistencia.*;
 import org.domiexpress.servicio.ServicioPedidos;
-import org.domiexpress.usuarios.*;
 
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
+
+        // 1. Productos de tipos distintos
         Producto hamburguesa = new Comida("Hamburguesa", 10000);
+        Producto papas = new Comida("Papas", 4000);
         Producto gaseosa = new Bebida("Gaseosa", 5000, TamanoBebida.GRANDE);
-        Producto combo = new Combo("Combo Clásico", List.of(hamburguesa, gaseosa), 0.15);
+        Producto combo = new Combo("Combo Clasico", List.of(hamburguesa, gaseosa), 0.15);
 
-        Pedido pedido = new Pedido("P-001");
-        pedido.agregarProducto(hamburguesa);
-        pedido.agregarProducto(combo);
-
-        double total = pedido.calcularTotal();
-
-        // Pagos
-        procesarPago(new PagoTarjeta("4321"), total);
-        procesarPago(new PagoNequi("3001234567"), total);
-
-        // Entregas
-        mostrarEntrega(new Domicilio("Calle 10 # 20-30"), total);
-        mostrarEntrega(new RecogerEnTienda("Sede Centro"), total);
-
-        // Promociones: todas se usan igual, a través de la interfaz
-        TipoEntrega entrega = new Domicilio("Calle 10 # 20-30");
-        double costoEnvio = entrega.calcularCostoEnvio();
-
-
-
-        List<Promocion> promociones = List.of(
-                new PromoDosPorUno(),
-                new PromoPorcentaje(0.10),
-                new PromoEnvioGratis()
-        );
-
-        for (Promocion promo : promociones) {
-            System.out.println(promo.describir() + " -> descuento: "
-                    + promo.calcularDescuento(pedido, costoEnvio));
-        }
-        // Persistencia: el Main solo conoce la interfaz
+        // 2. DIP: aqui se ELIGE la infraestructura; el servicio solo ve interfaces.
+        //    Cambiar a SMS o a otra base de datos es cambiar UNA linea.
         RepositorioPedidos repositorio = new RepositorioEnMemoria();
-        repositorio.guardar(pedido);
-        System.out.println("Pedidos guardados: " + repositorio.listarTodos().size());
-
-        // Notificación: cambiar de canal es cambiar una línea
         Notificador notificador = new NotificadorEmail();
-        notificador.notificar("cliente@correo.com", "Tu pedido " + pedido.getId() + " fue creado");
+        ServicioPedidos servicio = new ServicioPedidos(repositorio, notificador, new GeneradorFactura());
 
-        notificador = new NotificadorSMS();
-        notificador.notificar("3001234567", "Tu pedido " + pedido.getId() + " va en camino");
+        // ===== Pedido A: Domicilio + Nequi + dos promociones =====
+        Pedido pedidoA = new Pedido("P-001");
+        pedidoA.agregarProducto(combo);
+        pedidoA.agregarProducto(papas);
 
-        // Roles: cada uno se usa por su capacidad, no por su clase
-        Pedido pedidoRol = new Pedido("P-002");
-        PuedeOrdenar cliente = new Cliente("Ana", pedidoRol);
-        cliente.agregarAlPedido(hamburguesa);
-
-        PuedePrepararPedidos restaurante = new Restaurante("La Parrilla");
-        restaurante.preparar(pedidoRol);
-
-        PuedeEntregar repartidor = new Repartidor("Carlos");
-        repartidor.entregar(pedidoRol);
-
-        System.out.println("Estado final: " + pedidoRol.getEstado());
-        // Servicio: todo conectado por interfaces
-        ServicioPedidos servicio = new ServicioPedidos(
-                new RepositorioEnMemoria(),
-                new NotificadorEmail(),
-                new GeneradorFactura());
-
-        servicio.procesar(pedido,
+        System.out.println("\n##### PEDIDO A #####");
+        servicio.procesar(pedidoA,
                 new Domicilio("Calle 10 # 20-30"),
                 new PagoNequi("3001234567"),
-                List.of(new PromoPorcentaje(0.10)),
+                List.of(new PromoPorcentaje(0.10), new PromoEnvioGratis()),
                 "cliente@correo.com");
-    }
 
-    private static void procesarPago(MetodoPago metodo, double monto) {
-        metodo.pagar(monto);
-    }
+        // ===== Pedido B: Recoger en tienda + OTRO medio de pago + 2x1 =====
+        // Mismo servicio, mismo codigo: solo cambian los objetos que le pasamos.
+        Pedido pedidoB = new Pedido("P-002");
+        pedidoB.agregarProducto(hamburguesa);
+        pedidoB.agregarProducto(gaseosa);
 
-    private static void mostrarEntrega(TipoEntrega entrega, double subtotal) {
-        System.out.println(entrega.describir()
-                + " | Envío: " + entrega.calcularCostoEnvio()
-                + " | Total: " + (subtotal + entrega.calcularCostoEnvio()));
-    }
+        System.out.println("\n##### PEDIDO B #####");
+        servicio.procesar(pedidoB,
+                new RecogerEnTienda("Sede Centro"),
+                new PagoDaviplata("3109876543"),   // medio nuevo, servicio intacto
+                List.of(new PromoDosPorUno()),
+                "3109876543");
 
+        // ===== Persistencia =====
+        System.out.println("\nPedidos guardados: " + repositorio.listarTodos().size());
+    }
 }
